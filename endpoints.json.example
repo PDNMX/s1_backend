@@ -1,0 +1,18 @@
+[
+  {
+    "supplier_id": "EDOMEX",
+    "supplier_name": "Secretaría Ejecutiva del Sistema Estatal Anticorrupción del Estado México",
+    "system_id": 1,
+    "type": "REST",
+    "level": [
+      "estatal"
+    ],
+    "url": "",
+    "entities_url": "",
+    "token_url": "",
+    "username": "",
+    "password": "",
+    "client_id": "",
+    "client_secret": ""
+  }
+]
