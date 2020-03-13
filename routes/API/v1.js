@@ -88,7 +88,65 @@ router.post('/summary', (req, res) => {
 });
 
 router.post('/search', (req, res) => {
-    res.json({});
+
+    const { body } = req;
+    const { supplier_id, institucion } = body;
+    let {
+        page,
+        pageSize
+    } =  body;
+
+    if (typeof page === 'undefined' || page === null || isNaN(page)){
+        page = 1;
+    }
+
+    if (typeof pageSize === 'undefined' || pageSize === null || isNaN(pageSize)){
+        pageSize = 10;
+    }
+
+    if (typeof supplier_id === 'undefined'){
+        res.status(500).json({
+            error: "Debe proporcionar un proveedor de información"
+        });
+        return;
+    }
+
+    let endpoint = endpoints.find(d => d.supplier_id === supplier_id);
+
+    if (typeof endpoint === 'undefined'){
+        res.status(500).json({
+            error: "Proveedor de información no disponible"
+        });
+        return;
+    }
+
+    console.log(endpoint);
+
+    let options = {
+        page,
+        pageSize,
+        query: {}
+    };
+
+    const params = [
+        'nombres',
+        'primerApellido',
+        'segundoApellido'
+    ];
+
+    for (const k of params){
+        if (body.hasOwnProperty(k) && typeof body[k] !== 'undefined' && body[k] !== null && body[k] !== '') {
+            options.query[k] = body[k];
+        }
+    }
+
+    if (typeof institucion !== 'undefined' && typeof institucion === 'object'){
+        options.query.institucionDependencia = institucion.nombre;
+    }
+
+    fetchData(endpoint, options).then(data => {
+        res.json(data);
+    })
 });
 
 module.exports = router;
