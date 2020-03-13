@@ -146,7 +146,10 @@ router.post('/search', (req, res) => {
 
     fetchData(endpoint, options).then(data => {
         res.json(data);
-    })
+    }).catch(error => {
+        console.log(error);
+        res.status(500).json({error: "Algo salió mal..."});
+    });
 });
 
 module.exports = router;
