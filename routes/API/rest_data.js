@@ -1,20 +1,27 @@
 const axios = require('axios');
 const qs = require('qs');
 
-/*
 const fetchEntities = endpoint => {
-    return getToken(endpoint).then(token_data => {
-        const {access_token} = token_data;
+    return getToken(endpoint).then(response => {
+
+        if (typeof response.error !== 'undefined'){
+            return {error: true};
+        }
+
+        const {data} = response;
+        const {access_token} = data;
+
         const opts = {
-            uri: endpoint.entities_url,
+            url: endpoint.entities_url,
             method: 'GET',
-            qs: {
+            params: {
                 access_token: access_token,
             },
             json: true
         };
 
-        return rp(opts).then( entities => {
+        return axios(opts).then( response => {
+            const entities = response.data;
             return entities.map(e => {
                 e.supplier_id = endpoint.supplier_id;
                 return e;
@@ -22,7 +29,6 @@ const fetchEntities = endpoint => {
         });
     });
 };
-*/
 
 const getToken = endpoint => {
 
@@ -87,5 +93,5 @@ const fetchData = (endpoint, options) => {
 
 module.exports = {
     fetchData,
-    //fetchEntities
+    fetchEntities
 };
