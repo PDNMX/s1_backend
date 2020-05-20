@@ -4,7 +4,7 @@
     "supplier_name": "Secretaría Ejecutiva del Sistema Estatal Anticorrupción del Estado México",
     "system_id": 1,
     "type": "REST",
-    "level": [
+    "levels": [
       "estatal"
     ],
     "url": "",
