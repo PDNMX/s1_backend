@@ -103,7 +103,7 @@ router.post("/v1/summary", (req, res) => {
       res.json(summary);
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
       res.status(500).json({
         error: "Algo salio mal...",
       });
