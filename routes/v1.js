@@ -1,12 +1,19 @@
 var express = require("express");
 const cors = require("cors");
+const qs = require("qs");
 const { fetchData } = require("./rest_data");
 const endpoints = require("../endpoints");
+
+const log4js = require("log4js");
+var logger = log4js.getLogger("v1.js");
+logger.level = "all";
 
 var router = express.Router();
 router.use(cors());
 
 router.get("/", (req, res) => {
+  logger.info("It's live!!!");
+
   res.json({
     title: "API del Sistema 1",
     version: "1.0",
@@ -67,7 +74,7 @@ router.post("/v1/summary", (req, res) => {
   let queries = endpoints_.map((endpoint) => {
     let options_ = JSON.parse(JSON.stringify(options));
     return fetchData(endpoint, options_).catch((error) => {
-      console.log(error);
+      logger.error(error);
       return {
         supplier_id: endpoint.supplier_id,
         supplier_name: endpoint.supplier_name,
@@ -81,7 +88,6 @@ router.post("/v1/summary", (req, res) => {
   Promise.all(queries)
     .then((responses) => {
       let summary = responses.map((data) => {
-        console.log(data);
         if (typeof data.error !== "undefined") {
           return data;
         } else {
@@ -94,11 +100,10 @@ router.post("/v1/summary", (req, res) => {
           };
         }
       });
-      console.log(summary);
       res.json(summary);
     })
     .catch((error) => {
-      console.log(error);
+      console.error(error);
       res.status(500).json({
         error: "Algo salio mal...",
       });
@@ -143,7 +148,7 @@ function createQuery(req, res, next) {
     "totalIngresosNetos",
   ];
 
-  console.log("search query: ", query);
+  logger.info("search query: ", qs.stringify(query));
 
   params.forEach((p) => {
     if (
@@ -215,7 +220,6 @@ function createQuery(req, res, next) {
 }
 
 function crateOrder(req, res, next) {
-  console.log("order");
   next();
 }
 
@@ -226,7 +230,7 @@ router.post("/v1/search", createQuery, crateOrder, (req, res) => {
   const { supplier_id, institucion } = body;
   let { page, pageSize } = body;
 
-  console.log("query: ", query);
+  logger.info("query: ", qs.stringify(query));
 
   if (typeof page === "undefined" || page === null || isNaN(page)) {
     page = 1;
@@ -258,14 +262,14 @@ router.post("/v1/search", createQuery, crateOrder, (req, res) => {
     query: query,
   };
 
-  console.log("options: ", options);
+  logger.info("query final: ", qs.stringify(options));
 
   fetchData(endpoint, options)
     .then((data) => {
       res.json(data);
     })
     .catch((error) => {
-      console.log("error", error);
+      logger.error(error);
       res.status(500).json({ error: "Algo salió mal..." });
     });
 });

@@ -1,6 +1,10 @@
 const axios = require("axios");
 const qs = require("qs");
 
+const log4js = require("log4js");
+var logger = log4js.getLogger("rest_data.js");
+logger.level = "all";
+
 const fetchEntities = (endpoint) => {
   return getToken(endpoint).then((response) => {
     if (typeof response.error !== "undefined") {
@@ -30,6 +34,15 @@ const fetchEntities = (endpoint) => {
 };
 
 const getToken = (endpoint) => {
+  let data = {
+    grant_type: "password",
+    username: endpoint.username,
+    password: endpoint.password,
+  };
+  if (endpoint.scope !== "") {
+    data.scope = endpoint.scope;
+  }
+
   const opts = {
     url: endpoint.token_url,
     method: "post",
@@ -41,12 +54,7 @@ const getToken = (endpoint) => {
           "base64"
         ),
     },
-    data: qs.stringify({
-      grant_type: "password",
-      username: endpoint.username,
-      password: endpoint.password,
-      scope: endpoint.scope,
-    }),
+    data: qs.stringify(data),
     json: true,
   };
 
@@ -59,13 +67,14 @@ const fetchData = (endpoint, options) => {
   return getToken(endpoint).then((response) => {
     if (typeof response.error !== "undefined") {
       let { status, statusText, data } = response.error;
-      console.log("status: ", status);
-      console.log("statusText: ", statusText);
-      console.log("data: ", data);
+
+      logger.error("status:" + status);
+      logger.error("statusText:" + statusText);
+      logger.error("data:" + data);
+
       return { error: { status, statusText, data } };
     }
 
-    // const { data } = response;
     const { access_token } = response.data;
 
     let opts = {
@@ -103,7 +112,7 @@ const fetchData = (endpoint, options) => {
         return data;
       })
       .catch((e) => {
-        console.log(e);
+        logger.error(e);
         return { error: true };
       });
   });
