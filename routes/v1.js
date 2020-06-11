@@ -225,4 +225,25 @@ router.post('/v1/search', createQuery, crateOrder, (req, res) => {
 		});
 });
 
+router.post('/v1/logger', (req, res) => {
+	let logs = req.body.logs;
+
+	logs.forEach((log) => {
+		switch (log.level) {
+			case 'error':
+				logger.error(log);
+				break;
+			case 'info':
+				logger.info(log);
+				break;
+
+			default:
+				logger.info(log);
+				break;
+		}
+	});
+
+	res.json({ msj: 'ok' });
+});
+
 module.exports = router;
