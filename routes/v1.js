@@ -174,14 +174,64 @@ function createQuery(req, res, next) {
 	next();
 }
 
-function crateOrder(req, res, next) {
+function createOrder(req, res, next) {
+	let { sort, supplier_id } = req.body;
+	let _sort = {};
+	let datosEmpleoCargoComision = {};
+	let bienesInmuebles = {};
+
+	if (typeof sort === 'undefined' || sort === null || Object.entries(sort).length === 0) {
+		next();
+		return;
+	}
+
+	logger.info(supplier_id, '|sort|', sort);
+
+	const params = [ 'nombres', 'primerApellido', 'segundoApellido', 'escolaridadNivel', 'totalIngresosNetos' ];
+	const empleo = [
+		'nombreEntePublico',
+		'entidadFederativa',
+		'municipioAlcaldia',
+		'empleoCargoComision',
+		'nivelEmpleoCargoComision',
+		'nivelOrdenGobierno'
+	];
+
+	const inmuebles = [ 'superficieConstruccion', 'superficieTerreno', 'formaAdquisicion', 'valorAdquisicion' ];
+
+	params.forEach((p) => {
+		if (typeof sort[p] !== 'undefined') _sort[p] = sort[p];
+	});
+
+	empleo.forEach((e) => {
+		if (
+			typeof sort[e] !== 'undefined' //datosEmpleoCargoComision[e] = sort[e];
+		)
+			_sort['datosEmpleoCargoComision'] = {
+				..._sort['datosEmpleoCargoComision'],
+				[e]: sort[e]
+			};
+	});
+
+	inmuebles.forEach((i) => {
+		if (
+			typeof sort[i] !== 'undefined' //bienesInmuebles[i] = sort[i];
+		)
+			_sort['bienesInmuebles'] = {
+				..._sort['bienesInmuebles'],
+				[i]: sort[i]
+			};
+	});
+
+	req.body.sort = _sort;
 	next();
 }
 
-router.post('/v1/search', createQuery, crateOrder, (req, res) => {
-	let { query, supplier_id, institucion, page, pageSize } = req.body;
+router.post('/v1/search', createQuery, createOrder, (req, res) => {
+	let { query, supplier_id, institucion, page, pageSize, sort } = req.body;
 
 	logger.info(supplier_id, '|query|', query);
+	logger.info(supplier_id, '|sort final|', sort);
 
 	if (typeof page === 'undefined' || page === null || isNaN(page)) {
 		page = 1;
@@ -210,7 +260,8 @@ router.post('/v1/search', createQuery, crateOrder, (req, res) => {
 	let options = {
 		page,
 		pageSize,
-		query: query
+		query,
+		sort
 	};
 
 	logger.info(supplier_id, '|query final|', options);
