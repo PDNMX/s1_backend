@@ -7,3 +7,9 @@ services:
     restart: always
     ports:
       - ${PORT}:${PORT}
+
+networks:
+  default:
+    external:
+      name: DEMOSPDN
+
