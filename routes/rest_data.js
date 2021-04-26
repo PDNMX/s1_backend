@@ -1,5 +1,12 @@
-const axios = require('axios');
+const axiosp = require('axios');
+const https = require('https');
 const qs = require('qs');
+
+const axios = axiosp.create({
+	httpsAgent: new https.Agent({
+		rejectUnauthorized: false
+	})
+});
 
 const log4js = require('log4js');
 var logger = log4js.getLogger('rest_data.js');
