@@ -258,7 +258,6 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
 	}
 
 	let options = {
-		rejectUnauthorized: false,
 		page,
 		pageSize,
 		query,
