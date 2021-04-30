@@ -123,7 +123,7 @@ function createQuery(req, res, next) {
 
 	const rangos = [ 'superficieConstruccion', 'superficieTerreno', 'valorAdquisicion', 'totalIngresosNetos' ];
 
-	logger.info(supplier_id, '|search query|', query);
+	logger.info(supplier_id, '|search query|', JSON.stringify(query));
 
 	params.forEach((p) => {
 		if (typeof query[p] !== 'undefined' && query[p] !== null && query[p] !== '0' && query[p].length > 0) {
