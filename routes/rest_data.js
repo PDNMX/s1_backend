@@ -40,28 +40,37 @@ const fetchEntities = (endpoint) => {
 	});
 };
 
-const getToken = (endpoint) => {
+const getToken = ({ username, password, scope, token_url, client_id, client_secret }) => {
+
 	let data = {
 		grant_type: 'password',
-		username: endpoint.username,
-		password: endpoint.password
+		username: username,
+		password: password,
+		client_id: client_id,
+		client_secret: client_secret
 	};
-	if (endpoint.scope !== '') {
-		data.scope = endpoint.scope;
+	if (scope !== '') {
+		data.scope = scope;
 	}
 
 	const opts = {
-		url: endpoint.token_url,
-		method: 'post',
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			Authorization: 'Basic ' + Buffer.from(`${endpoint.client_id}:${endpoint.client_secret}`).toString('base64')
+		auth: {
+			username: client_id,
+			password: client_secret
 		},
-		data: qs.stringify(data),
+		responseType: 'json',
 		json: true
 	};
 
-	return axios(opts);
+	return axios
+		.post(token_url, qs.stringify(data), opts)
+		.then((res) => {
+			return res;
+		})
+		.catch((err) => {
+			console.log(err.response.data);
+			return err;
+		});
 };
 
 const fetchData = (endpoint, options) => {
@@ -120,12 +129,12 @@ const fetchData = (endpoint, options) => {
 						typeof e.response === 'undefined'
 							? { error: { status: e.errno, statusText: e.code } }
 							: {
-									error: {
-										status: e.response.status,
-										statusText: e.response.statusText,
-										data: e.response.data
-									}
-								};
+								error: {
+									status: e.response.status,
+									statusText: e.response.statusText,
+									data: e.response.data
+								}
+							};
 
 					logger.error(supplier_id, error);
 					delete error.error.data;
@@ -137,8 +146,8 @@ const fetchData = (endpoint, options) => {
 				typeof e.response === 'undefined'
 					? { error: { status: e.errno, statusText: e.code } }
 					: {
-							error: { status: e.response.status, statusText: e.response.statusText, data: e.response.data }
-						};
+						error: { status: e.response.status, statusText: e.response.statusText, data: e.response.data }
+					};
 
 			logger.error(supplier_id, error);
 			delete error.error.data;
