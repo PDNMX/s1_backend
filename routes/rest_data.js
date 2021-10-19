@@ -56,10 +56,7 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 		data.scope = scope;
 	}
 
-	const opts = {
-		headers:{
-			'Content-Type': 'application/json;charset=UTF-8'
-		},
+	const opts = {		
 		auth: {
 			username: client_id,
 			password: client_secret
