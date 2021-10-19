@@ -22,6 +22,9 @@ const fetchEntities = (endpoint) => {
 		const { access_token } = data;
 
 		const opts = {
+			headers:{
+				'Content-Type': 'application/json;charset=UTF-8'
+			},
 			url: endpoint.entities_url,
 			method: 'GET',
 			params: {
@@ -54,6 +57,9 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 	}
 
 	const opts = {
+		headers:{
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
 		auth: {
 			username: client_id,
 			password: client_secret
@@ -94,6 +100,7 @@ const fetchData = (endpoint, options) => {
 				url: endpoint.url,
 				method: 'post',
 				headers: {
+					'Content-Type': 'application/json;charset=UTF-8',
 					Authorization: 'Bearer ' + access_token
 				},
 				data: options,
