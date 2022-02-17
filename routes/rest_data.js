@@ -66,7 +66,7 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 	};
 
 	return axios
-		.post(token_url, qs.stringify(data), opts)
+		.post(token_url, decodeURI(qs.stringify(data)), opts)
 		.then((res) => {
 			return res;
 		})
