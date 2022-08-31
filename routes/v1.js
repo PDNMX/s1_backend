@@ -242,10 +242,16 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
 
   let options = {
     page,
-    pageSize,
-    query,
-    sort
+    pageSize
   };
+
+  if (query && Object.keys(query) > 0) {
+    options.query = query;
+  }
+
+  if (sort && Object.keys(sort) > 0) {
+    options.sort = sort;
+  }
 
   logger.info(supplier_id, '|query final|', options);
 
