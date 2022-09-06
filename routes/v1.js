@@ -245,11 +245,11 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
     pageSize
   };
 
-  if (query && Object.keys(query) > 0) {
+  if (query && Object.keys(query).length > 0) {
     options.query = query;
   }
 
-  if (sort && Object.keys(sort) > 0) {
+  if (sort && Object.keys(sort).length > 0) {
     options.sort = sort;
   }
 
