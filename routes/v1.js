@@ -261,7 +261,14 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
     })
     .catch(error => {
       logger.error(error);
-      res.status(500).json({ error: { status, statusText, data } });
+      const errResponse = error.response || {};
+      res.status(500).json({
+        error: {
+          status: errResponse.status || 500,
+          statusText: errResponse.statusText || 'Internal Server Error',
+          data: errResponse.data || error.message
+        }
+      });
     });
 });
 
