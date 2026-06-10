@@ -71,8 +71,11 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 			return res;
 		})
 		.catch((err) => {
-			console.log(err.response.data);
-			return err;
+			let errorDetail = err.response
+				? { status: err.response.status, statusText: err.response.statusText, data: err.response.data }
+				: { status: err.errno || err.code, statusText: err.message };
+			logger.error('getToken error', errorDetail);
+			return { error: errorDetail };
 		});
 };
 
