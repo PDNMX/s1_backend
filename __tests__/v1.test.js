@@ -13,6 +13,7 @@ const mockEndpoints = [
     client_id: 'test_client',
     client_secret: 'test_secret',
     scope: 'read',
+    method: 'body',
     status: 'ACTIVE',
   },
   {
@@ -29,6 +30,7 @@ const mockEndpoints = [
     client_id: 'test_client2',
     client_secret: 'test_secret2',
     scope: 'read',
+    method: 'body',
     status: 'ACTIVE',
   },
 ];

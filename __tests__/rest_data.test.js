@@ -25,6 +25,7 @@ const testEndpoint = {
   client_id: 'test_client',
   client_secret: 'test_secret',
   scope: 'read',
+  method: 'body',
 };
 
 describe('fetchData', () => {
@@ -48,13 +49,16 @@ describe('fetchData', () => {
 
     const result = await fetchData(testEndpoint, { page: 1, pageSize: 10 });
 
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-      testEndpoint.token_url,
-      expect.any(String),
-      expect.objectContaining({
-        auth: { username: testEndpoint.client_id, password: testEndpoint.client_secret },
-      })
-    );
+    const postCallArgs = mockAxiosInstance.post.mock.calls[0];
+    const postUrl = postCallArgs[0];
+    const postData = postCallArgs[1];
+    const postOpts = postCallArgs[2];
+
+    expect(postUrl).toBe(testEndpoint.token_url);
+    expect(postData).toContain('client_id=' + testEndpoint.client_id);
+    expect(postData).toContain('client_secret=' + testEndpoint.client_secret);
+    expect(postData).toContain('grant_type=password');
+    expect(postOpts).not.toHaveProperty('auth');
 
     expect(mockAxiosInstance).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -133,6 +137,43 @@ describe('fetchData', () => {
     expect(result.endpoint_type).toBe('REST');
   });
 
+  it('envía client_id/client_secret por body cuando method es body (default)', async () => {
+    mockAxiosInstance.post.mockResolvedValueOnce({
+      data: { access_token: 'token_body' },
+    });
+    mockAxiosInstance.mockResolvedValueOnce({
+      data: { pagination: { page: 1, pageSize: 10, totalRows: 0, hasNextPage: false }, results: [] },
+    });
+
+    await fetchData(testEndpoint, { page: 1, pageSize: 10 });
+
+    const [url, body, opts] = mockAxiosInstance.post.mock.calls[0];
+    expect(body).toContain('client_id=' + testEndpoint.client_id);
+    expect(body).toContain('client_secret=' + testEndpoint.client_secret);
+    expect(opts).not.toHaveProperty('auth');
+  });
+
+  it('envía client_id/client_secret por header cuando method es header', async () => {
+    const headerEndpoint = { ...testEndpoint, method: 'header' };
+
+    mockAxiosInstance.post.mockResolvedValueOnce({
+      data: { access_token: 'token_header' },
+    });
+    mockAxiosInstance.mockResolvedValueOnce({
+      data: { pagination: { page: 1, pageSize: 10, totalRows: 0, hasNextPage: false }, results: [] },
+    });
+
+    await fetchData(headerEndpoint, { page: 1, pageSize: 10 });
+
+    const [url, body, opts] = mockAxiosInstance.post.mock.calls[0];
+    expect(body).not.toContain('client_id');
+    expect(body).not.toContain('client_secret');
+    expect(opts.auth).toEqual({
+      username: testEndpoint.client_id,
+      password: testEndpoint.client_secret,
+    });
+  });
+
   it('detecta código de error en la respuesta de datos', async () => {
     mockAxiosInstance.post.mockResolvedValueOnce({
       data: { access_token: 'token' },
@@ -155,7 +196,7 @@ describe('fetchEntities', () => {
     jest.clearAllMocks();
   });
 
-  it('obtiene token y luego entidades exitosamente', async () => {
+  it('obtiene token y luego entidades exitosamente con method body', async () => {
     mockAxiosInstance.post.mockResolvedValueOnce({
       data: { access_token: 'entity_token' },
     });
@@ -170,6 +211,9 @@ describe('fetchEntities', () => {
 
     const result = await fetchEntities(testEndpoint);
 
+    const postOpts = mockAxiosInstance.post.mock.calls[0][2];
+    expect(postOpts).not.toHaveProperty('auth');
+
     expect(mockAxiosInstance).toHaveBeenCalledWith(
       expect.objectContaining({
         url: testEndpoint.entities_url,
@@ -181,6 +225,33 @@ describe('fetchEntities', () => {
     expect(result.length).toBe(2);
     expect(result[0].supplier_id).toBe('TEST');
     expect(result[0].id).toBe('ent1');
+  });
+
+  it('obtiene token y luego entidades exitosamente con method header', async () => {
+    const headerEndpoint = { ...testEndpoint, method: 'header' };
+
+    mockAxiosInstance.post.mockResolvedValueOnce({
+      data: { access_token: 'entity_token_header' },
+    });
+
+    const entitiesData = [
+      { id: 'entA', name: 'Entity A' },
+    ];
+    mockAxiosInstance.mockResolvedValueOnce({
+      data: entitiesData,
+    });
+
+    const result = await fetchEntities(headerEndpoint);
+
+    const [url, body, opts] = mockAxiosInstance.post.mock.calls[0];
+    expect(body).not.toContain('client_id');
+    expect(opts.auth).toEqual({
+      username: testEndpoint.client_id,
+      password: testEndpoint.client_secret,
+    });
+
+    expect(result.length).toBe(1);
+    expect(result[0].supplier_id).toBe('TEST');
   });
 
   it('devuelve error si getToken falla', async () => {
