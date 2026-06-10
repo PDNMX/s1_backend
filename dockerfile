@@ -1,12 +1,11 @@
-FROM node:12-alpine
+FROM node:22-alpine
 
-MAINTAINER Sergio Rodríguez <sergio.rdzsg@gmail.com>
+LABEL maintainer="Sergio Rodríguez <sergio.rdzsg@gmail.com>"
 
 ADD . /pdn_s1_backend
 WORKDIR /pdn_s1_backend
 
-RUN yarn add global yarn \
-&& yarn install \
+RUN yarn install \
 && yarn cache clean
 
 EXPOSE ${PORT}
