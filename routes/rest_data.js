@@ -22,7 +22,7 @@ const fetchEntities = (endpoint) => {
 		const { access_token } = data;
 
 		const opts = {
-			headers:{
+			headers: {
 				'Content-Type': 'application/json;charset=UTF-8'
 			},
 			url: endpoint.entities_url,
@@ -43,27 +43,31 @@ const fetchEntities = (endpoint) => {
 	});
 };
 
-const getToken = ({ username, password, scope, token_url, client_id, client_secret }) => {
+const getToken = ({ username, password, scope, token_url, client_id, client_secret, method }) => {
 
 	let data = {
 		grant_type: 'password',
 		username: username,
 		password: password,
-		client_id: client_id,
-		client_secret: client_secret
 	};
 	if (scope !== '') {
 		data.scope = scope;
 	}
 
-	const opts = {		
-		auth: {
-			username: client_id,
-			password: client_secret
-		},
+	const opts = {
 		responseType: 'json',
 		json: true
 	};
+
+	if (method === 'header') {
+		opts.auth = {
+			username: client_id,
+			password: client_secret
+		};
+	} else {
+		data.client_id = client_id;
+		data.client_secret = client_secret;
+	}
 
 	return axios
 		.post(token_url, decodeURI(qs.stringify(data)), opts)
@@ -74,7 +78,7 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 			let errorDetail = err.response
 				? { status: err.response.status, statusText: err.response.statusText, data: err.response.data }
 				: { status: err.errno || err.code, statusText: err.message };
-			logger.error('getToken error', errorDetail);
+			logger.error('getToken error', data.token_url, errorDetail);
 			return { error: errorDetail };
 		});
 };
