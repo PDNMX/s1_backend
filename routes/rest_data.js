@@ -84,7 +84,7 @@ const fetchData = (endpoint, options) => {
 	return getToken(endpoint)
 		.then((response) => {
 			if (typeof response.error !== 'undefined') {
-				logger.info(supplier_id, 'paso por aqui...');
+				// logger.info(supplier_id, 'paso por aqui...');
 				let { status, statusText, data } = response.error;
 
 				logger.error(supplier_id, 'status:' + status);
