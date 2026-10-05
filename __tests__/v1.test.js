@@ -44,6 +44,7 @@ jest.mock('../routes/rest_data', () => ({
 
 const request = require('supertest');
 const app = require('../app');
+const { normalizeBody } = require('../app');
 const { fetchData } = require('../routes/rest_data');
 
 describe('GET /', () => {
@@ -308,6 +309,103 @@ describe('POST /v1/search', () => {
     const callArg = fetchData.mock.calls[0][1];
     expect(callArg.page).toBe(3);
     expect(callArg.pageSize).toBe(25);
+  });
+});
+
+describe('requests sin cuerpo (sin body ni content-type)', () => {
+  beforeEach(() => {
+    fetchData.mockReset();
+  });
+
+  it('POST /v1/search sin cuerpo responde JSON, no una página HTML de error', async () => {
+    const res = await request(app).post('/v1/search');
+
+    expect(res.status).toBe(500);
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(res.body.error).toBe('Debe proporcionar un proveedor de información');
+    expect(res.text).not.toMatch(/<!DOCTYPE html>/);
+  });
+
+  it('POST /v1/search sin cuerpo no intenta llamar a ningún proveedor', async () => {
+    await request(app).post('/v1/search');
+
+    expect(fetchData).not.toHaveBeenCalled();
+  });
+
+  it('POST /v1/summary sin cuerpo consulta a todos los proveedores', async () => {
+    fetchData.mockResolvedValue({
+      supplier_id: 'TEST',
+      supplier_name: 'Test Provider',
+      levels: ['ESTATAL'],
+      pagination: { page: 1, pageSize: 1, totalRows: 0, hasNextPage: false },
+      results: [],
+    });
+
+    const res = await request(app).post('/v1/summary');
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(2);
+    expect(fetchData).toHaveBeenCalledTimes(2);
+  });
+
+  it('POST /v1/summary con cuerpo no-JSON también consulta a todos los proveedores', async () => {
+    fetchData.mockResolvedValue({
+      supplier_id: 'TEST',
+      supplier_name: 'Test Provider',
+      levels: ['ESTATAL'],
+      pagination: { page: 1, pageSize: 1, totalRows: 0, hasNextPage: false },
+      results: [],
+    });
+
+    const res = await request(app)
+      .post('/v1/summary')
+      .set('Content-Type', 'text/plain')
+      .send('nivel_gobierno=MUNICIPAL');
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(2);
+    expect(fetchData).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('normalizeBody (guard de req.body)', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('define req.body en {} y lo reporta cuando viene undefined (simula Express 5)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const req = { method: 'POST', originalUrl: '/v1/search' };
+    const next = jest.fn();
+
+    normalizeBody(req, {}, next);
+
+    expect(req.body).toEqual({});
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toContain('/v1/search');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('no reporta nada y respeta el body cuando ya viene definido', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const req = { method: 'POST', originalUrl: '/v1/search', body: { supplier_id: 'TEST' } };
+    const next = jest.fn();
+
+    normalizeBody(req, {}, next);
+
+    expect(req.body).toEqual({ supplier_id: 'TEST' });
+    expect(spy).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('deja intacto un body vacío ({}), que es lo que entrega Express 4', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const req = { method: 'POST', originalUrl: '/v1/summary', body: {} };
+
+    normalizeBody(req, {}, jest.fn());
+
+    expect(req.body).toEqual({});
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
