@@ -11,15 +11,22 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Express 4 gives req.body = {} when nothing was parsed, but Express 5 leaves it undefined,
-// which would make every destructuring of req.body throw. Normalize it and make it visible.
+// Express 5 leaves req.body undefined when nothing was parsed, while Express 4 always assigned {}.
+// Normalize it so no destructuring of req.body can throw, but only report it for the methods that are
+// supposed to carry a body: a GET legitimately has none and must not spam the logs.
 function normalizeBody(req, res, next) {
-  if (typeof req.body === "undefined") {
+  if (typeof req.body !== "undefined") {
+    next();
+    return;
+  }
+
+  req.body = {};
+
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
     console.error(
       "req.body undefined for " + req.method + " " + req.originalUrl +
       " (no JSON/urlencoded body parsed); defaulting to {}"
     );
-    req.body = {};
   }
 
   next();

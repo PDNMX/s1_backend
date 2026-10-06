@@ -313,8 +313,15 @@ describe('POST /v1/search', () => {
 });
 
 describe('requests sin cuerpo (sin body ni content-type)', () => {
+  let consoleSpy;
+
   beforeEach(() => {
     fetchData.mockReset();
+    consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('POST /v1/search sin cuerpo responde JSON, no una página HTML de error', async () => {
@@ -366,6 +373,41 @@ describe('requests sin cuerpo (sin body ni content-type)', () => {
     expect(res.body.length).toBe(2);
     expect(fetchData).toHaveBeenCalledTimes(2);
   });
+
+  it('un POST sin cuerpo sí se reporta en consola', async () => {
+    await request(app).post('/v1/search');
+
+    expect(consoleSpy).toHaveBeenCalled();
+    expect(String(consoleSpy.mock.calls[0][0])).toContain('/v1/search');
+  });
+});
+
+describe('requests GET sin cuerpo no deben reportarse', () => {
+  let consoleSpy;
+
+  beforeEach(() => {
+    consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('GET / no dispara el guard', async () => {
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('version', '1.0');
+    expect(consoleSpy).not.toHaveBeenCalled();
+  });
+
+  it('GET /v1/providers no dispara el guard', async () => {
+    const res = await request(app).get('/v1/providers');
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(2);
+    expect(consoleSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('normalizeBody (guard de req.body)', () => {
@@ -398,7 +440,7 @@ describe('normalizeBody (guard de req.body)', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it('deja intacto un body vacío ({}), que es lo que entrega Express 4', () => {
+  it('deja intacto un body vacío ({}), que es lo que entrega un request con body parseado', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const req = { method: 'POST', originalUrl: '/v1/summary', body: {} };
 
@@ -406,6 +448,18 @@ describe('normalizeBody (guard de req.body)', () => {
 
     expect(req.body).toEqual({});
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('normaliza un GET sin cuerpo a {} pero no lo reporta', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const req = { method: 'GET', originalUrl: '/v1/providers' };
+    const next = jest.fn();
+
+    normalizeBody(req, {}, next);
+
+    expect(req.body).toEqual({});
+    expect(spy).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
   });
 });
 
