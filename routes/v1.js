@@ -30,7 +30,7 @@ router.get('/v1/providers', (req, res) => {
 });
 
 router.post('/v1/summary', (req, res) => {
-  const { body } = req;
+  const body = req.body || {};
   const { nivel_gobierno, institucion } = body;
 
   let options = {
@@ -99,7 +99,7 @@ router.post('/v1/summary', (req, res) => {
 });
 
 function createQuery(req, res, next) {
-  let { query, supplier_id } = req.body;
+  let { query, supplier_id } = req.body || {};
   let _query = {};
 
   if (typeof query === 'undefined' || query === null || Object.entries(query).length === 0) {
@@ -165,7 +165,7 @@ function createQuery(req, res, next) {
 }
 
 function createOrder(req, res, next) {
-  let { sort, supplier_id } = req.body;
+  let { sort, supplier_id } = req.body || {};
   let _sort = {};
   let datosEmpleoCargoComision = {};
   let bienesInmuebles = {};
@@ -211,7 +211,7 @@ function createOrder(req, res, next) {
 }
 
 router.post('/v1/search', createQuery, createOrder, (req, res) => {
-  let { query, supplier_id, institucion, page, pageSize, sort } = req.body;
+  let { query, supplier_id, institucion, page, pageSize, sort } = req.body || {};
 
   logger.info(supplier_id, '|query|', query);
   logger.info(supplier_id, '|sort final|', sort);
@@ -273,7 +273,7 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
 });
 
 router.post('/v1/logger', (req, res) => {
-  let logs = req.body.logs;
+  let logs = (req.body || {}).logs;
 
   logs.forEach(log => {
     switch (log.level) {
