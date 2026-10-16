@@ -474,3 +474,121 @@ describe('POST /v1/logger', () => {
     expect(res.body.msj).toBe('ok');
   });
 });
+
+describe('log de acceso: una línea JSON por request', () => {
+  let originalWrite;
+  let lines;
+
+  beforeEach(() => {
+    fetchData.mockReset();
+    originalWrite = process.stdout.write;
+    lines = [];
+    process.stdout.write = (chunk) => {
+      lines.push(String(chunk));
+      return true;
+    };
+  });
+
+  afterEach(() => {
+    process.stdout.write = originalWrite;
+  });
+
+  // Parses every captured line; a stray non-JSON line makes the parse throw and
+  // fails the test, which is exactly what we want (no colors, no extra text).
+  const jsonLines = () =>
+    lines
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l));
+
+  it('emite una sola línea JSON con datos del cliente para GET /', async () => {
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+
+    const parsed = jsonLines();
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ method: 'GET', path: '/', status: 200 });
+    expect(parsed[0].rid).toBeTruthy();
+    expect(parsed[0].ip).toBeTruthy();
+    expect(parsed[0].ua).toBeTruthy();
+    expect(typeof parsed[0].duration_ms).toBe('number');
+  });
+
+  it('pliega supplier, query, sort y paginación en la línea de POST /v1/search', async () => {
+    fetchData.mockResolvedValue({ supplier_id: 'TEST', results: [] });
+
+    const res = await request(app)
+      .post('/v1/search')
+      .send({ supplier_id: 'TEST', query: { nombres: 'Juan' }, sort: { nombres: 'asc' }, page: 3, pageSize: 25 })
+      .set('Content-Type', 'application/json');
+
+    expect(res.status).toBe(200);
+
+    const parsed = jsonLines();
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({
+      method: 'POST',
+      path: '/v1/search',
+      status: 200,
+      supplier: 'TEST',
+      query: { nombres: 'Juan' },
+      sort: { nombres: 'asc' },
+      page: 3,
+      page_size: 25,
+    });
+  });
+
+  it('también emite una sola línea para un 500 y conserva el supplier', async () => {
+    const res = await request(app)
+      .post('/v1/search')
+      .send({ supplier_id: 'NOEXISTE' })
+      .set('Content-Type', 'application/json');
+
+    expect(res.status).toBe(500);
+
+    const parsed = jsonLines();
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ method: 'POST', status: 500, supplier: 'NOEXISTE' });
+  });
+});
+
+describe('logs de aplicación en JSON', () => {
+  let originalWrite;
+  let lines;
+
+  beforeEach(() => {
+    originalWrite = process.stdout.write;
+    lines = [];
+    process.stdout.write = (chunk) => {
+      lines.push(String(chunk));
+      return true;
+    };
+  });
+
+  afterEach(() => {
+    process.stdout.write = originalWrite;
+  });
+
+  // The access line has no `logger` field, so this isolates application logs.
+  const appLogs = () =>
+    lines
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l))
+      .filter((l) => typeof l.logger !== 'undefined');
+
+  it('estructura el log reenviado como campos JSON de nivel superior', async () => {
+    const res = await request(app)
+      .post('/v1/logger')
+      .send({ logs: [{ level: 'error', message: 'falló el front', user: 'abc' }] })
+      .set('Content-Type', 'application/json');
+
+    expect(res.status).toBe(200);
+
+    const log = appLogs().find((l) => l.logger === 'v1.js');
+    expect(log).toBeDefined();
+    expect(log).toMatchObject({ level: 'ERROR', message: 'falló el front', user: 'abc' });
+    expect(log.ts).toBeTruthy();
+  });
+});
