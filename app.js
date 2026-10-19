@@ -4,6 +4,11 @@ var cookieParser = require("cookie-parser");
 var crypto = require("crypto");
 var morgan = require("morgan");
 
+var log4js = require("log4js");
+require("./config/log4js");
+var hostLog = log4js.getLogger("app.js");
+var hosts = require("./config/hosts");
+
 var apiRouter = require("./routes/v1");
 
 var app = express();
@@ -42,6 +47,37 @@ app.use(
     return JSON.stringify(line);
   })
 );
+
+// Reject callers outside the configured allowlists (ALLOWED_HOSTS / ALLOWED_IPS in
+// config/hosts.js; unset = allow everything). Sits after morgan so a 403 still gets
+// an access line, and before body parsing so rejected requests are never parsed.
+// It also stashes host/client on req.logCtx so every access line records who
+// queried the API.
+function hostGuard(req, res, next) {
+  var host = req.get("host") || "-";
+  var fwd = req.get("x-forwarded-for") || "";
+  // First X-Forwarded-For hop is the real caller behind a proxy; otherwise the socket peer.
+  var client = fwd.split(",")[0].trim() || req.ip || "-";
+
+  req.logCtx.host = host;
+  req.logCtx.client = client;
+
+  if (!hosts.hostAllowed(host)) {
+    hostLog.error({ rid: req.id, msg: "host no autorizado", host: host, client: client, path: req.originalUrl });
+    res.status(403).json({ error: "Host no autorizado" });
+    return;
+  }
+
+  if (!hosts.ipAllowed(client)) {
+    hostLog.error({ rid: req.id, msg: "cliente no autorizado", host: host, client: client, path: req.originalUrl });
+    res.status(403).json({ error: "Cliente no autorizado" });
+    return;
+  }
+
+  next();
+}
+
+app.use(hostGuard);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -83,6 +119,7 @@ function truncate(value, max) {
 
 module.exports = app;
 
-// Exported so the guard can be unit tested directly: under Express 4 it never fires
-// (body-parser always sets req.body = {}), so it is unreachable through a normal request.
+// Exported so the guards can be unit tested directly: under Express 4 body-parser
+// always sets req.body = {}, so normalizeBody is unreachable through a normal request.
 module.exports.normalizeBody = normalizeBody;
+module.exports.hostGuard = hostGuard;

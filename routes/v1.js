@@ -3,6 +3,7 @@ const cors = require('cors');
 const qs = require('qs');
 const { fetchData } = require('./rest_data');
 const endpoints = require('../endpoints');
+const { allowedOrigins } = require('../config/hosts');
 
 const log4js = require('log4js');
 require('../config/log4js');
@@ -10,7 +11,9 @@ var logger = log4js.getLogger('v1.js');
 logger.level = 'all';
 
 var router = express.Router();
-router.use(cors());
+// ALLOWED_ORIGINS (comma-separated) pins which browser origins get CORS headers;
+// unset = the previous wide-open cors(). Non-browser callers are unaffected either way.
+router.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : {}));
 
 router.get('/', (req, res) => {
   res.json({
