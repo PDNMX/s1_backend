@@ -3,17 +3,19 @@ const cors = require('cors');
 const qs = require('qs');
 const { fetchData } = require('./rest_data');
 const endpoints = require('../endpoints');
+const { allowedOrigins } = require('../config/hosts');
 
 const log4js = require('log4js');
+require('../config/log4js');
 var logger = log4js.getLogger('v1.js');
 logger.level = 'all';
 
 var router = express.Router();
-router.use(cors());
+// ALLOWED_ORIGINS (comma-separated) pins which browser origins get CORS headers;
+// unset = the previous wide-open cors(). Non-browser callers are unaffected either way.
+router.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : {}));
 
 router.get('/', (req, res) => {
-  logger.info("It's live!!!");
-
   res.json({
     title: 'API del Sistema 1',
     version: '1.0'
@@ -62,7 +64,7 @@ router.post('/v1/summary', (req, res) => {
   let queries = endpoints_.map(endpoint => {
     let options_ = JSON.parse(JSON.stringify(options));
     return fetchData(endpoint, options_).catch(error => {
-      logger.error(error);
+      logger.error({ rid: req.id }, error);
       return {
         supplier_id: endpoint.supplier_id,
         supplier_name: endpoint.supplier_name,
@@ -91,7 +93,7 @@ router.post('/v1/summary', (req, res) => {
       res.json(summary);
     })
     .catch(error => {
-      logger.error(error);
+      logger.error({ rid: req.id }, error);
       res.status(500).json({
         error: 'Algo salio mal...'
       });
@@ -99,7 +101,7 @@ router.post('/v1/summary', (req, res) => {
 });
 
 function createQuery(req, res, next) {
-  let { query, supplier_id } = req.body || {};
+  let { query } = req.body || {};
   let _query = {};
 
   if (typeof query === 'undefined' || query === null || Object.entries(query).length === 0) {
@@ -112,8 +114,6 @@ function createQuery(req, res, next) {
   const empleo = ['nombreEntePublico', 'entidadFederativa', 'municipioAlcaldia', 'empleoCargoComision', 'nivelOrdenGobierno', 'nivelEmpleoCargoComision'];
 
   const rangos = ['superficieConstruccion', 'superficieTerreno', 'valorAdquisicion', 'totalIngresosNetos'];
-
-  logger.info(supplier_id, '|search query|', JSON.stringify(query));
 
   params.forEach(p => {
     if (typeof query[p] !== 'undefined' && query[p] !== null && query[p] !== '0' && query[p].length > 0) {
@@ -165,7 +165,7 @@ function createQuery(req, res, next) {
 }
 
 function createOrder(req, res, next) {
-  let { sort, supplier_id } = req.body || {};
+  let { sort } = req.body || {};
   let _sort = {};
   let datosEmpleoCargoComision = {};
   let bienesInmuebles = {};
@@ -174,8 +174,6 @@ function createOrder(req, res, next) {
     next();
     return;
   }
-
-  logger.info(supplier_id, '|sort|', sort);
 
   const params = ['nombres', 'primerApellido', 'segundoApellido', 'escolaridadNivel', 'totalIngresosNetos'];
   const empleo = ['nombreEntePublico', 'entidadFederativa', 'municipioAlcaldia', 'empleoCargoComision', 'nivelEmpleoCargoComision', 'nivelOrdenGobierno'];
@@ -213,15 +211,24 @@ function createOrder(req, res, next) {
 router.post('/v1/search', createQuery, createOrder, (req, res) => {
   let { query, supplier_id, institucion, page, pageSize, sort } = req.body || {};
 
-  logger.info(supplier_id, '|query|', query);
-  logger.info(supplier_id, '|sort final|', sort);
-
   if (typeof page === 'undefined' || page === null || isNaN(page)) {
     page = 1;
   }
 
   if (typeof pageSize === 'undefined' || pageSize === null || isNaN(pageSize)) {
     pageSize = 10;
+  }
+
+  // Request context for the access log line (app.js folds req.logCtx into it).
+  // Recorded before the early returns so 4xx/5xx responses still carry it.
+  req.logCtx.supplier = supplier_id;
+  req.logCtx.page = page;
+  req.logCtx.page_size = pageSize;
+  if (query && Object.keys(query).length > 0) {
+    req.logCtx.query = query;
+  }
+  if (sort && Object.keys(sort).length > 0) {
+    req.logCtx.sort = sort;
   }
 
   if (typeof supplier_id === 'undefined') {
@@ -253,14 +260,12 @@ router.post('/v1/search', createQuery, createOrder, (req, res) => {
     options.sort = sort;
   }
 
-  logger.info(supplier_id, '|query final|', options);
-
   fetchData(endpoint, options)
     .then(data => {
       res.json(data);
     })
     .catch(error => {
-      logger.error(error);
+      logger.error({ rid: req.id }, error);
       const errResponse = error.response || {};
       res.status(500).json({
         error: {

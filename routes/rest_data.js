@@ -9,6 +9,7 @@ const axios = axiosp.create({
 });
 
 const log4js = require('log4js');
+require('../config/log4js');
 var logger = log4js.getLogger('rest_data.js');
 logger.level = 'all';
 
@@ -78,7 +79,7 @@ const getToken = ({ username, password, scope, token_url, client_id, client_secr
 			let errorDetail = err.response
 				? { status: err.response.status, statusText: err.response.statusText, data: err.response.data }
 				: { status: err.errno || err.code, statusText: err.message };
-			logger.error('getToken error', data.token_url, errorDetail);
+			logger.error('getToken error', { token_url, ...errorDetail });
 			return { error: errorDetail };
 		});
 };
@@ -91,9 +92,7 @@ const fetchData = (endpoint, options) => {
 				// logger.info(supplier_id, 'paso por aqui...');
 				let { status, statusText, data } = response.error;
 
-				logger.error(supplier_id, 'status:' + status);
-				logger.error(supplier_id, 'statusText:' + statusText);
-				logger.error(supplier_id, 'data:' + data);
+				logger.error({ supplier: supplier_id, status, statusText, data });
 
 				return { error: { status, statusText, data } };
 			}
@@ -147,7 +146,7 @@ const fetchData = (endpoint, options) => {
 								}
 							};
 
-					logger.error(supplier_id, error);
+					logger.error({ supplier: supplier_id, ...error.error });
 					delete error.error.data;
 					return error;
 				});
@@ -160,7 +159,7 @@ const fetchData = (endpoint, options) => {
 						error: { status: e.response.status, statusText: e.response.statusText, data: e.response.data }
 					};
 
-			logger.error(supplier_id, error);
+			logger.error({ supplier: supplier_id, ...error.error });
 			delete error.error.data;
 			return error;
 		});
