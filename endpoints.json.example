@@ -14,6 +14,8 @@
     "password": "",
     "client_id": "",
     "client_secret": "",
-    "method": "body"
+    "scope": "read",
+    "status": "ACTIVE",
+    "method": "header"
   }
 ]

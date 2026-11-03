@@ -63,3 +63,12 @@ typings/
 .idea/
 *~
 endpoints.json
+
+
+# AI assistant / agent instruction files
+AGENTS.md
+agentes.md
+CLAUDE.md
+.cursorrules
+.cursor/rules/
+.github/copilot-instructions.md

@@ -79,8 +79,12 @@ function hostGuard(req, res, next) {
 
 app.use(hostGuard);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// CVE-2026-111497 (Node2Shell/HTTP2Shell): Express 5's body-parser decompresses Brotli
+// request bodies by default (inflate: true), reaching Node's vulnerable bundled Brotli
+// decoder. This API only accepts plain JSON, so inflate:false rejects any compressed
+// body with 415 (gzip included). Updating Node is the real fix; this is defense in depth.
+app.use(express.json({ inflate: false }));
+app.use(express.urlencoded({ extended: false, inflate: false }));
 
 // Express 5 leaves req.body undefined when nothing was parsed, while Express 4 always assigned {}.
 // Normalize it so no destructuring of req.body can throw, but only report it for the methods that are

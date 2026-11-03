@@ -9,8 +9,3 @@ services:
     env_file:
       - .env
 
-networks:
-  default:
-    external:
-      name: DEMOSPDN
-
